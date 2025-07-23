@@ -24,7 +24,7 @@
 
 ## 연결리스트의 구현
 > Node Class
-```
+```python
 Class Node: 
     def __init__(self, data): 
         self.data = data
@@ -32,6 +32,42 @@ Class Node:
 ```
 - data에 노드에 저장할 데이터가 들어가고 Node 객체가 처음 생성되면 다음 노드 주소가 저장될 next에는 None으로 초기화 된다.
 > Insert의 구현
-```
+```python
 def insert(head, data, index): 
+    new_node = Node(data)
+    if index == 0: 
+        new_node.next = head
+        head = new_node
+        return head
+    current_node = head
+    for _ in range(index - 1): 
+        current_node = current_node.next
+    new_node.next = current_node.next
+    current_node.next = new_node
+    return head
 ```
+- 데이터를 담은 새로운 노드를 생성하고 만약 삽입할 위치가 맨 앞(head)이라면 현재 head를 새로운 노드의 next에 넣고 새로운 노드를 head에 할당한 뒤 head를 반환한다.
+- 맨 앞이 아니라면 index-1 번 만큼 후행 노드로 간 뒤 그 뒤에 새로운 노드를 삽입한다.
+- 이 경우 가장 마지막 노드(next가 None인) 뒤쪽으로 삽입되더라도 새로운 노드의 next가 None이 되고 마지막이였던 노드의 next가 새로운 노드를 가르키면서 자연스럽게 새로운 노드가 tail이 된다.
+> Delete의 구현
+```python
+def delete(head, data) # data로 삭제할 시
+    current_node = head
+    pre_node = None
+    try: 
+        while current_node.data != data: 
+            pre_node = current_node
+            current_node = current_node.next
+    except:
+        priint("can't find data!!")
+        return head
+    if current_node is head: 
+        head = current_node.next
+        return head
+    pre_node.next = current_node.next
+    return head
+```
+- 해당 노드의 앞과 뒤의 노드를 이어주어야 하기 때문에 현재 노드와 이전 노드의 정보 모두 필요하다.
+- while로 해당하는 데이터가 있는 노드까지 순회한뒤 만약 삭제할 노드가 head라면 head다음 노드를 head로 만들어주면 간단하게 삭제가 가능하다. 만약 삭제할 값을 찾지 못하였다면 None에서 .next를 참조하려 할때 exception이 발생하는데 이때 try문으로 예외처리를 하면 된다.
+- 삭제할 노드의 이전 노드의 next를 다음노드에 이어주면 삭제할 노드는 자연스럽게 참조가 불가능하게 바뀐다. 
+- 파이썬의 경우 Garbege Collection을 통해 자동으로 메모리 관리를 하기 때문에 삭제한 노드를 임의로 메모리 할당을 해제시킬 필요는 없다.
