@@ -133,7 +133,7 @@ def kmp_search(find_str, str_in_here):
         if str_in_here[idx] == find_str[find_idx]: # 둘이 같다면 인덱스 1씩 증가
             find_idx += 1
         else: # 다른경우 lps상의 인덱스로 후퇴(lps의 인덱스는 0이 아닐경우 접두사와 접미사가 일치하는 부분이 있다는 것이다.)
-            find_idx = lps[find_idx]
+            find_idx = lps[find_idx-1] # 지금까지 일치했던 곳(현재 find_idx에서 틀렸으므로 find_idx-1까지는 일치했다는 뜻)
             if find_idx != 0: # 일치가 존재할 경우 해당 idx를 다시 확인 해야 하므로 -1해줘야 한다.
                 idx -= 1
         idx += 1
