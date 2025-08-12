@@ -56,7 +56,7 @@
     | | | | | | | | | | | |a|
     | | | | | | | | | | | |↑|
 
-- 건너뛰다보니 분명히 'abcdabe'를 포함하고 있음에도 건너뛰는 바람에 찾을 수가 없다. 
+- 건너뛰다보니 분명히 'abcdabce'를 포함하고 있음에도 건너뛰는 바람에 찾을 수가 없다. 
 > 그렇다면 동일한 접두사, 접미사가 포함되어 있는 경우 검사가 완료된 부분을 사용해서 이미 일치했던 접미사가 접두사와 같으니 접두사가 이미 일치했다는것이 확정 되었으므로 해당 부분 다음부터 검색을 재시작하면 정말 불필요한 검색만 건너뛸 수 있을 것이다.
 - 위와 같은 아이디어로 패턴이 불일치 시 돌아갈 위치를 저장하는 LPS(Longest Prefix which is also Suffix, 가장 긴 접두사 접미사 일치 길이)배열을 만들어서 불일치가 발생하면 LPS배열에 해당하는 값으로 돌아가면 된다.
 - LPS에 대해서도 직접 'abcdabce'에 대한 표로 보면 다음과 같다.
@@ -92,39 +92,25 @@
 - KMP를 이용하면 아까 놓쳤던 부분을 찾을 수 있다. 이제 이부분을 실제 코드로 구현해보면 
 ```python
 def get_LPS(string): # 접두사와 접미사가 일치하는 최대길이
-    n = len(string)
-    LPS_list = [0 for _ in range(n)] # 반환할 LPS리스트
-    for i in range(2, n+1):
-        sub = string[:i] # 서브스트링의 길이를 2부터 1씩 늘려나가면서 LPS찾기
-        for s in range(i-1): 
-            if sub[s] != sub[s+1]: # 0~i까지 모두 같은 문자면 0으로
-                break 
-        else: 
-            continue # 이부분은 개선의 여지가 있음 AAA면 003 이런식으로
-        left, right, cnt, max_cnt = 0, 0, 0, 0 # 접두사 부분이랑 접미사 부분을 반으로 나눔
-        if i % 2 == 0: # 짝수면 그대로 홀수면 right 올림처리를 해줘야 함
-            right = i // 2
-            for j in range(right): # 절반만큼 반복
-                if sub[left] == sub[right+j]: # 같으면 left를 당기면서 카운트
-                    cnt += 1
-                    left += 1
-                else: # 아니라면 최대값 갱신 후 초기화
-                    if max_cnt < cnt: 
-                        max_cnt = cnt
-                        cnt = 0
-        else: 
-            right = (i // 2) + 1 # 홀수 올림 처리
-            for j in range(right-1): # 반복횟수는 -1 해줘야함
-                if sub[left] == sub[right+j]: 
-                    cnt += 1
-                    left += 1
-                else: 
-                    if max_cnt < cnt: 
-                        max_cnt = cnt
-                        cnt = 0
-        if max_cnt < cnt: max_cnt = cnt # 마지막에도 한번 더 최대값 갱신
-        LPS_list[i-1] = max_cnt
-    return LPS_list
+    N = len(string)
+    lps_list = [0 for _ in range(N+1)] # LSP 리스트
+    for s in range(2, N+1): # 인덱스 벗어나는것 때문에 N+1
+        sub = string[:s] # 각 서브스트링 별로 계산
+        sub1 = sub[:s//2] # 접두사 부분
+        sub2 = sub[s//2+(s%2):] # 접미사 부분
+        left, cnt, max_cnt = 0, 0, 0 # 최대 길이만 측정
+        for i in range(len(sub2)): 
+            if sub1[left] == sub2[i]: # 같으면 길이 증가
+                left += 1
+                cnt += 1
+            else: # 다르면 최대값 갱신
+                if max_cnt < cnt: 
+                    max_cnt = cnt
+                cnt = 0
+                left = 0
+        if max_cnt < cnt: max_cnt = cnt
+        lps_list[s] = max_cnt
+    return lps_list # LPS반환
 
 def kmp_search(find_str, str_in_here): 
     lps = get_LPS(find_str)
@@ -132,16 +118,85 @@ def kmp_search(find_str, str_in_here):
     while idx < len(str_in_here): # 찾을 곳의 인덱스 끝까지 반복
         if str_in_here[idx] == find_str[find_idx]: # 둘이 같다면 인덱스 1씩 증가
             find_idx += 1
-        else: # 다른경우 lps상의 인덱스로 후퇴(lps의 인덱스는 0이 아닐경우 접두사와 접미사가 일치하는 부분이 있다는 것이다.)
-            find_idx = lps[find_idx-1] # 지금까지 일치했던 곳(현재 find_idx에서 틀렸으므로 find_idx-1까지는 일치했다는 뜻)
+        else: # 다른경우 lps상의 인덱스로 후퇴
+              # (lps의 인덱스는 0이 아닐경우 접두사와 접미사가 일치하는 부분이 있다는 것이다.)
+            find_idx = lps[find_idx-1] # 지금까지 일치했던 곳
+                                       # (현재 find_idx에서 틀렸으므로 find_idx-1까지는 일치했다는 뜻)
             if find_idx != 0: # 일치가 존재할 경우 해당 idx를 다시 확인 해야 하므로 -1해줘야 한다.
                 idx -= 1
         idx += 1
-        if find_idx >= len(find_str): # 만약 찾을 텍스트의 길이를 초과하여 일치(전원일치)하면 시작 인덱스를 반환
+        if find_idx >= len(find_str): # 만약 전원일치 하면 시작 인덱스를 반환
             return idx - len(find_str)
     return -1 # 텍스트를 찾지 못했다면 -1 리턴
 
 print(kmp_search('ABCDABE', 'ABCDABCDABEE'))
+
+>> 4
+```
+
+## 보이어 무어 알고리즘
+- 보이어 무어 알고리즘의 경우 찾는 문자열의 길이만큼 포함된 문자열을 자를 경우 무조건 찾는 문자열의 일부가 걸린다는 아이디어에서 출발한다. 만약 찾는 문자열의 길이가 4라면 4만큼 자른 문자열중 뒤에것 하나만 검사하면 검사하지 않는 3글자 안에 4글자짜리 문자열이 들어가지 못하므로 무조건 찾는 문자열의 일부를 찾을 수 있다는 뜻이다.
+- 문자열이 일치하는지 검사하려면 모든 문자가 일치하는지 확인하는 방법밖에 없다. 따라서 일부 문자를 찾으면 문자열의 시작 지점으로 돌아가야 한다. 따라서 어떤 문자를 찾으면 얼마만큼 돌아가야 하는가를 `skip`리스트에 미리 저장해 둔다.
+- 예시를 들어 설명하자면
+> `EOGGXYPVSY` 에서 `XYPV`를 찾는다면 먼저 skip리스트를 만들어야 한다. 
+- skip 리스트는 해당 문자를 찾을 경우 얼마 전으로 돌아가야 첫글자를 만날 수 있는지 저장하는 리스트이다.
+
+    |P|V|X|Y|다른문자|
+    |-|-|-|-|------|
+    |2|3|0|1|   0  |
+
+- 다른문자를 만난다면 그냥 검사 인덱스를 찾는 문자열의 길이만큼 증가시키면 된다. 따라서 0을 감지하여 동작하게 하면 되겠다. 이때 X의 경우도 0으로 같지만 X는 첫글자이므로 이미 일치하는 상황이라 건너뛰지 않는다.
+
+    |E|O|G|G| |X|Y|P|V| |S|Y|
+    |-|-|-|-|-|-|-|-|-|-|-|-|
+    | | | |X| | | | | | | | |
+    | | | |↑| | | | | | | | |
+
+- 찾는 문자열의 길이만큼 끊어서 가장 뒤의 문자를 비교한다. 이때 G는 다른 문자에 해당되므로 4만큼 건너뛴다.
+
+    |E|O|G|G| |X|Y|P|V| |S|Y|
+    |-|-|-|-|-|-|-|-|-|-|-|-|
+    | | | | | | | | |X| | | |
+    | | | | | | | | |↑| | | |
+
+- 이때는 일치하지는 않지만 V가 찾는 문자열에 포함되는 문자이므로 skip 리스트의 값만큼 검색 인덱스를 감소시킨다. V는 3이므로 3을 줄이면 첫글자 위치로 돌아갈 수 있다.
+
+    |E|O|G|G|X| |Y|P|V|S| |Y|
+    |-|-|-|-|-|-|-|-|-|-|-|-|
+    | | | | |X| | | | | | | |
+    | | | | |↑| | | | | | | |
+
+- 이렇게 첫글자 위치로 돌아가서 검사를 시작한다. 만약 이때 일치하지 않는다면 여기서 찾는 문자의 길이만큼 건너뛰게 된다.(아래의 S위치) 하지만 위의 상황은 일치하기 때문에 한글자씩 검사하기 시작한다.
+
+    |E|O|G|G|X| |Y|P|V|S| |Y|
+    |-|-|-|-|-|-|-|-|-|-|-|-|
+    | | | | |X| |Y|P|V| | | |
+    | | | | | | | | | |↑| | |
+
+- 이렇게 문자열을 찾을 수 있다. 이제 이것을 코드로 구현해 보면 다음과 같다.
+```python
+def Boyer_Moore(str1, str2)
+    skip = [0 for _ in range(26)] # skip 리스트
+    N1 = len(str1)
+    for i in range(len(str1)): # 시작점으로 돌아갈 위치를 skip에 저장함
+        skip[ord(str1[i])-65] = i
+    idx, find_idx = N1-1, 0 # 확인할 인덱스가 str1의 길이만큼 건너뜀
+    while idx < len(str2): 
+        if str1[find_idx] == str2[idx]: # 첫문자와 일치한다면 이후로 쭉 검사
+            find_idx += 1
+            idx += 1
+        else: 
+            find_idx = 0
+            if skip[ord(str2[idx])-65] != 0: # 불일치 하면서 str1에 있는 문자이면
+                idx -= skip[ord(str2[idx])-65] # 시작지점으로 돌아간다
+            else: # 아니면 str1의 길이만큼 건너뜀
+                idx += N1
+        if find_idx >= N1: 
+            return idx - N1 # 찾았을 때
+    else: 
+        return -1 # 못찾았을 때
+
+print(Boyer_Moore('XYPV', 'EOGGXYPVSY'))
 
 >> 4
 ```
